@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ResumeIQ — AI Detection System</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #181b22;
+    --border: #222630;
+    --border2: #2c3040;
+    --text: #e8eaf0;
+    --muted: #6b7080;
+    --accent: #6c63ff;
+    --accent2: #a78bfa;
+    --ai-color: #f87171;
+    --human-color: #34d399;
+    --warn-color: #fbbf24;
+    --safe-color: #34d399;
+    --critical-color: #f87171;
+    --high-color: #fb923c;
+    --medium-color: #fbbf24;
+    --low-color: #a3e635;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* GRID NOISE BACKGROUND */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(108,99,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(108,99,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  .wrapper { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+  /* ── HEADER ── */
+  header {
+    padding: 48px 0 32px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 20px; font-weight: 700; letter-spacing: -0.5px;
+    color: var(--text);
+  }
+  .logo span { color: var(--accent); }
+  .badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 2px;
+    background: rgba(108,99,255,0.12);
+    border: 1px solid rgba(108,99,255,0.3);
+    color: var(--accent2); padding: 4px 10px; border-radius: 4px;
+  }
+
+  /* ── HERO ── */
+  .hero { padding: 20px 0 48px; }
+  .hero h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(28px, 5vw, 48px);
+    font-weight: 700; line-height: 1.15;
+    letter-spacing: -1px; margin-bottom: 16px;
+  }
+  .hero h1 em { font-style: normal; color: var(--accent2); }
+  .hero p { font-size: 16px; color: var(--muted); line-height: 1.7; max-width: 520px; }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 20px;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--border2); }
+  .card-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; letter-spacing: 2px;
+    color: var(--muted); text-transform: uppercase;
+    margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+  }
+  .card-title::before {
+    content: ''; display: block;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* ── TEXTAREA ── */
+  .input-area {
+    width: 100%; height: 220px; resize: vertical;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 14px; line-height: 1.7; padding: 16px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+  .input-area:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(108,99,255,0.12);
+  }
+  .input-area::placeholder { color: var(--muted); }
+
+  /* ── DEMO BUTTONS ── */
+  .demo-row {
+    display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0;
+  }
+  .demo-btn {
+    font-size: 12px; padding: 6px 14px; border-radius: 6px;
+    border: 1px solid var(--border2); background: transparent;
+    color: var(--muted); cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    transition: all 0.15s;
+  }
+  .demo-btn:hover { border-color: var(--accent); color: var(--accent2); }
+
+  /* ── ANALYZE BUTTON ── */
+  .analyze-btn {
+    width: 100%; padding: 16px;
+    background: var(--accent);
+    border: none; border-radius: 10px;
+    color: #fff; font-family: 'Space Mono', monospace;
+    font-size: 14px; font-weight: 700; letter-spacing: 1px;
+    cursor: pointer; transition: all 0.2s;
+    position: relative; overflow: hidden;
+    margin-top: 12px;
+  }
+  .analyze-btn:hover:not(:disabled) {
+    background: #7c73ff;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(108,99,255,0.3);
+  }
+  .analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* ── LOADER ── */
+  .loader { display: none; text-align: center; padding: 40px; }
+  .loader.active { display: block; }
+  .spinner {
+    width: 40px; height: 40px; margin: 0 auto 16px;
+    border: 3px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loader p { color: var(--muted); font-size: 14px; font-family: 'Space Mono', monospace; }
+
+  /* ── RESULTS ── */
+  #results { display: none; }
+  #results.visible { display: block; animation: fadeUp 0.4s ease; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+
+  /* ── VERDICT BANNER ── */
+  .verdict-banner {
+    border-radius: 12px; padding: 24px;
+    margin-bottom: 20px;
+    border: 1px solid;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .verdict-banner.critical { background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.3); }
+  .verdict-banner.high     { background: rgba(251,146,60,0.08);  border-color: rgba(251,146,60,0.3); }
+  .verdict-banner.medium   { background: rgba(251,191,36,0.08);  border-color: rgba(251,191,36,0.3); }
+  .verdict-banner.low      { background: rgba(163,230,53,0.08);  border-color: rgba(163,230,53,0.3); }
+  .verdict-banner.safe     { background: rgba(52,211,153,0.08);  border-color: rgba(52,211,153,0.3); }
+
+  .verdict-text { font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 700; }
+  .verdict-banner.critical .verdict-text { color: var(--critical-color); }
+  .verdict-banner.high     .verdict-text { color: var(--high-color); }
+  .verdict-banner.medium   .verdict-text { color: var(--medium-color); }
+  .verdict-banner.low      .verdict-text { color: var(--low-color); }
+  .verdict-banner.safe     .verdict-text { color: var(--safe-color); }
+
+  .verdict-meta { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .conf-pill {
+    font-family: 'Space Mono', monospace; font-size: 12px;
+    padding: 6px 14px; border-radius: 6px;
+    background: rgba(255,255,255,0.06); color: var(--text);
+  }
+
+  /* ── MAIN STATS ── */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px;
+    text-align: center;
+  }
+  .stat-pct {
+    font-family: 'Space Mono', monospace;
+    font-size: 52px; font-weight: 700; line-height: 1;
+    margin-bottom: 8px;
+    transition: all 0.5s;
+  }
+  .stat-pct.ai-color { color: var(--ai-color); }
+  .stat-pct.human-color { color: var(--human-color); }
+  .stat-label { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; font-family: 'Space Mono', monospace; }
+
+  /* ── COMBINED BAR ── */
+  .split-bar-wrap { margin-bottom: 20px; }
+  .split-bar-labels {
+    display: flex; justify-content: space-between;
+    font-size: 12px; font-family: 'Space Mono', monospace;
+    color: var(--muted); margin-bottom: 8px;
+  }
+  .split-bar {
+    height: 20px; border-radius: 10px;
+    background: var(--surface2);
+    overflow: hidden; position: relative;
+    border: 1px solid var(--border);
+  }
+  .split-bar-inner {
+    height: 100%; border-radius: 10px;
+    display: flex; transition: none;
+  }
+  .bar-ai {
+    background: linear-gradient(90deg, #ef4444, #f87171);
+    transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+  }
+  .bar-human {
+    background: linear-gradient(90deg, #10b981, #34d399);
+    flex: 1;
+  }
+  .split-bar-ticks {
+    display: flex; justify-content: space-between;
+    font-size: 10px; color: var(--muted); margin-top: 6px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* ── FEATURE GRID ── */
+  .feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .feature-item {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px;
+  }
+  .feature-name { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; font-family: 'Space Mono', monospace; margin-bottom: 8px; }
+  .feature-bar-bg { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .feature-bar-fill { height: 100%; border-radius: 3px; transition: width 0.9s cubic-bezier(0.4,0,0.2,1); }
+  .feature-value { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; margin-top: 6px; }
+
+  /* ── CHUNK TABLE ── */
+  .chunk-list { display: flex; flex-direction: column; gap: 10px; }
+  .chunk-item {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px;
+    display: grid; grid-template-columns: 32px 1fr auto;
+    gap: 14px; align-items: start;
+    transition: border-color 0.2s;
+  }
+  .chunk-item:hover { border-color: var(--border2); }
+  .chunk-num {
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    color: var(--muted); padding-top: 2px;
+  }
+  .chunk-text { font-size: 13px; line-height: 1.6; color: rgba(232,234,240,0.75); }
+  .chunk-badge {
+    font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700;
+    padding: 4px 10px; border-radius: 6px; white-space: nowrap;
+    text-align: center;
+  }
+  .chunk-badge.ai { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.25); }
+  .chunk-badge.human { background: rgba(52,211,153,0.12); color: #34d399; border: 1px solid rgba(52,211,153,0.2); }
+  .chunk-pct { font-size: 11px; color: var(--muted); font-family: 'Space Mono', monospace; margin-top: 2px; text-align: center; }
+
+  /* ── META ROW ── */
+  .meta-row {
+    display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;
+  }
+  .meta-chip {
+    font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 1px;
+    padding: 6px 12px; border-radius: 6px;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .meta-chip strong { color: var(--text); }
+
+  /* ── ERROR ── */
+  .error-msg {
+    background: rgba(248,113,113,0.08);
+    border: 1px solid rgba(248,113,113,0.3);
+    border-radius: 10px; padding: 16px 20px;
+    color: #f87171; font-size: 14px;
+    display: none;
+  }
+  .error-msg.show { display: block; }
+
+  footer { padding: 40px 0; text-align: center; color: var(--muted); font-size: 12px; font-family: 'Space Mono', monospace; }
+
+  @media (max-width: 600px) {
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .stat-pct { font-size: 38px; }
+    header { flex-direction: column; gap: 12px; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <div class="logo">Resume<span>IQ</span></div>
+    <div class="badge">AI DETECTION v1.0</div>
+  </header>
+
+  <div class="hero">
+    <h1>Detect <em>AI-written</em><br/>resume content</h1>
+    <p>Segment-level analysis using linguistic features — perplexity, burstiness, buzzword density, and more. Returns exact percentage splits for any ratio.</p>
+  </div>
+
+  <!-- INPUT CARD -->
+  <div class="card">
+    <div class="card-title">Paste Resume Text</div>
+    <textarea class="input-area" id="resumeInput" placeholder="Paste the full resume text here — the more text, the more accurate the analysis..."></textarea>
+    <div class="demo-row">
+      <span style="font-size:12px;color:var(--muted);align-self:center;font-family:'Space Mono',monospace;">Load sample:</span>
+      <button class="demo-btn" onclick="loadSample('ai')">AI Resume</button>
+      <button class="demo-btn" onclick="loadSample('human')">Human Resume</button>
+      <button class="demo-btn" onclick="loadSample('mixed')">Mixed (50/50)</button>
+      <button class="demo-btn" onclick="loadSample('mixed70')">Mixed (70/30)</button>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+    <button class="analyze-btn" id="analyzeBtn" onclick="analyze()">▶ ANALYZE RESUME</button>
+  </div>
+
+  <!-- LOADER -->
+  <div class="loader" id="loader">
+    <div class="spinner"></div>
+    <p>Analyzing linguistic patterns...</p>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results">
+
+    <!-- VERDICT -->
+    <div class="verdict-banner" id="verdictBanner">
+      <div>
+        <div class="verdict-text" id="verdictText">—</div>
+        <div class="verdict-meta" id="verdictMeta">—</div>
+      </div>
+      <div class="conf-pill" id="confPill">—</div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-pct ai-color" id="aiPct">—</div>
+        <div class="stat-label">AI Generated</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-pct human-color" id="humanPct">—</div>
+        <div class="stat-label">Human Written</div>
+      </div>
+    </div>
+
+    <!-- SPLIT BAR -->
+    <div class="card split-bar-wrap">
+      <div class="card-title">Content Split</div>
+      <div class="split-bar-labels">
+        <span id="barLabelAI">AI</span>
+        <span id="barLabelHuman">Human</span>
+      </div>
+      <div class="split-bar">
+        <div class="split-bar-inner">
+          <div class="bar-ai" id="barAI" style="width:0%"></div>
+          <div class="bar-human"></div>
+        </div>
+      </div>
+      <div class="split-bar-ticks">
+        <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+      </div>
+    </div>
+
+    <!-- META CHIPS -->
+    <div class="meta-row" id="metaRow"></div>
+
+    <!-- FEATURES -->
+    <div class="card">
+      <div class="card-title">Feature Analysis</div>
+      <div class="feature-grid" id="featureGrid"></div>
+    </div>
+
+    <!-- CHUNK ANALYSIS -->
+    <div class="card">
+      <div class="card-title">Segment-by-Segment Breakdown</div>
+      <div class="chunk-list" id="chunkList"></div>
+    </div>
+
+  </div><!-- /results -->
+
+  <footer>ResumeIQ · AI Content Detection System · For academic use</footer>
+</div>
+
+<script>
+// ──────────────────────────────────────────────────────
+//  SAMPLE TEXTS
+// ──────────────────────────────────────────────────────
+const SAMPLES = {
+  ai: `John Smith | Software Engineer | john.smith@email.com | +1-555-0100
+
+PROFESSIONAL SUMMARY
+Results-driven software engineer with 5+ years of experience leveraging cutting-edge technologies to deliver scalable, robust solutions. Proven track record of spearheading cross-functional collaboration and orchestrating the seamless implementation of best practices across dynamic development environments. Highly motivated self-starter with demonstrated ability to drive actionable insights and optimize team performance.
+
+EXPERIENCE
+Senior Software Engineer — TechCorp Inc. (2021–Present)
+• Spearheaded the development and maintenance of microservices architecture utilizing Node.js and React.
+• Orchestrated the seamless migration of legacy systems to cloud infrastructure, achieving 40% performance improvement.
+• Collaborated with cross-functional stakeholders to deliver high-priority deliverables within established timelines.
+• Leveraged cutting-edge CI/CD pipelines to streamline deployment processes and ensure operational excellence.
+
+Software Engineer — DataSolutions Ltd (2019–2021)
+• Implemented scalable RESTful APIs serving 100,000+ daily active users with 99.9% uptime.
+• Facilitated knowledge transfer sessions to ensure team alignment with technical best practices.
+• Executed comprehensive code reviews and contributed to continuous improvement initiatives.
+
+EDUCATION
+Bachelor of Science in Computer Science — State University (2019)
+GPA: 3.8/4.0 | Dean's List | Academic Excellence Award
+
+SKILLS
+Programming: Python, JavaScript, TypeScript, Java, Go
+Frameworks: React, Node.js, Django, Spring Boot
+Cloud: AWS, Azure, GCP | Databases: PostgreSQL, MongoDB, Redis`,
+
+  human: `Sarah Chen | sarah.chen92@gmail.com | 555-0199 | LinkedIn: sarahchen
+
+Hey, I'm a developer who's been doing web stuff for about 4 years now. I started out doing mostly backend Python work and kind of fell into frontend React development because our team was short-staffed. Turns out I really like it.
+
+Work history:
+
+Frontend Dev at Startup XYZ (Jan 2022 – now)
+Honestly this job taught me a ton. I joined when the company was like 8 people and we didn't really have processes. I ended up building out a lot of the component library basically from scratch. Made a lot of mistakes early on with state management (anyone who's over-used Redux knows what I mean) but we eventually got things into a decent shape. I've been the main person maintaining our design system.
+
+Junior Dev at Agency ABC (2020-2022)
+Client work. Did a lot of Wordpress stuff I'd rather forget, but also some genuinely interesting React projects. The agency environment was chaotic but I got really good at figuring things out fast when a client changes requirements 2 days before launch (which happened more than I'd like).
+
+Before that I did some freelance work and a bootcamp internship that I don't list anymore because it was 3 months and I mostly made coffee.
+
+What I'm actually good at: React, CSS (I actually enjoy CSS, I know, weird), some Node.js for simple backends, Git, and figuring out bugs that have been there for 6 months that nobody wanted to touch.
+
+I have a degree in Communications, not CS. I'm mostly self-taught on the technical side.`,
+
+  mixed: `Alex Rivera | alex.rivera@email.com | Software Developer
+
+PROFESSIONAL SUMMARY
+Results-driven software developer with proven track record of leveraging innovative solutions to deliver scalable applications. Highly motivated professional with demonstrated expertise in cross-functional collaboration and best practices implementation.
+
+About Me (Personal Section)
+I got into coding kind of by accident, honestly. I was studying biology in college and ended up taking an intro programming class just to fill a credit requirement. Four years later here I am writing production code for a living. The transition was weird and I made a lot of mistakes, but I think that's kind of the point.
+
+TECHNICAL EXPERIENCE
+Software Developer — MidTech Solutions (2022–Present)
+• Implemented and maintained RESTful API services utilizing Python Django framework.
+• Orchestrated seamless database migration from MySQL to PostgreSQL with zero downtime.
+• Collaborated with stakeholders to deliver actionable technical deliverables on schedule.
+
+The project I'm actually most proud of at MidTech isn't on this list because it was kind of a side thing — I built an internal tool that automated a report that used to take someone 3 hours every Monday. Nobody asked me to, I just got annoyed watching my coworker do it manually.
+
+EDUCATION
+B.S. Computer Science — Tech University (2022)
+Honestly barely scraped through algorithms. Loved the distributed systems class though.`,
+
+  mixed70: `Alexandra Johnson | Senior Product Manager | alex.johnson@email.com
+
+EXECUTIVE SUMMARY
+Dynamic and results-driven product management professional with 7+ years of experience spearheading innovative product strategies. Proven track record of orchestrating cross-functional teams to deliver scalable, market-leading solutions. Highly motivated leader with demonstrated expertise in leveraging cutting-edge methodologies to drive actionable business outcomes and optimize stakeholder engagement across diverse organizational environments.
+
+PROFESSIONAL EXPERIENCE
+Senior Product Manager — Enterprise Solutions Corp (2020–Present)
+• Spearheaded end-to-end product lifecycle management for flagship SaaS platform serving 500K+ enterprise users.
+• Orchestrated seamless collaboration between engineering, design, and business stakeholders to ensure deliverable alignment.
+• Leveraged data-driven insights to optimize product roadmap, achieving 35% improvement in user retention metrics.
+• Facilitated cross-functional sprint planning and ensured adherence to agile best practices.
+
+Product Manager — InnovateTech Inc (2018–2020)
+• Implemented comprehensive go-to-market strategies for three product launches generating $2M+ revenue.
+• Executed rigorous competitive analysis and translated insights into actionable product requirements.
+
+The last 6 months have genuinely been the hardest stretch of my career. We had to sunset a product that I'd spent 2 years building, and even though the business decision made sense, it was rough telling the users who'd come to depend on it. That experience changed how I think about product decisions in ways I'm still processing.
+
+EDUCATION
+MBA — Business University (2018) | B.S. Business Administration (2016)
+Summa Cum Laude | Product Management Certification | Agile Scrum Master`
+};
+
+// ──────────────────────────────────────────────────────
+//  FEATURE META
+// ──────────────────────────────────────────────────────
+const FEATURE_META = {
+  perplexity:    { label: "Predictability",  desc: "Low entropy = AI" },
+  burstiness:    { label: "Uniformity",      desc: "Uniform length = AI" },
+  buzzwords:     { label: "Buzzword density",desc: "High buzzwords = AI" },
+  human_markers: { label: "Human markers",   desc: "Casual language = Human" },
+  sent_length:   { label: "Sentence length", desc: "15-25 words = AI" },
+  punctuation:   { label: "Punct. formality",desc: "Formal punctuation = AI" },
+  repetition:    { label: "Repetition",      desc: "Repeated phrases = AI" },
+  formality:     { label: "Formality",       desc: "Perfect formal = AI" },
+};
+
+function loadSample(type) {
+  document.getElementById('resumeInput').value = SAMPLES[type];
+}
+
+// ──────────────────────────────────────────────────────
+//  CLIENT-SIDE ANALYSIS (mirrors backend logic)
+// ──────────────────────────────────────────────────────
+const AI_BUZZWORDS = [
+  "proven track record","results-driven","dynamic professional","leveraged",
+  "spearheaded","orchestrated","synergized","utilized","passionate about",
+  "highly motivated","team player","go-getter","strong work ethic",
+  "detail-oriented","self-starter","innovative","cutting-edge","best practices",
+  "actionable insights","cross-functional","stakeholder","deliverables","scalable",
+  "robust","seamlessly","collaborated with","contributed to","responsible for",
+  "managed","developed and maintained","ensured","facilitated","streamlined",
+  "optimized","implemented","executed","achieved","demonstrated"
+];
+const HUMAN_MARKERS = [
+  "i ","i've","i'd","i'll","my ","me ","we ","our ","honestly","basically",
+  "kind of","a bit","you know","really","quite","pretty much","got to",
+  "ended up","decided to","tried to","learned that","realized"
+];
+
+function cleanText(t) { return t.replace(/\s+/g,' ').trim(); }
+function splitSentences(t) { return t.split(/(?<=[.!?])\s+/).map(s=>s.trim()).filter(s=>s.length>20); }
+function splitChunks(text, size=100) {
+  const words = text.split(' ');
+  const chunks = [];
+  for (let i=0; i<words.length; i+=size) {
+    const c = words.slice(i,i+size).join(' ');
+    if (c.length > 50) chunks.push(c);
+  }
+  return chunks.length ? chunks : [text];
+}
+
+function entropy(text) {
+  const words = text.toLowerCase().split(/\s+/);
+  const freq = {};
+  words.forEach(w => freq[w] = (freq[w]||0)+1);
+  const total = words.length;
+  let e = 0;
+  Object.values(freq).forEach(c => { const p=c/total; e -= p*Math.log2(p); });
+  const maxE = Math.log2(Object.keys(freq).length)||1;
+  return 1 - e/maxE;
+}
+
+function burstiness(sentences) {
+  if (sentences.length < 2) return 0.5;
+  const lens = sentences.map(s=>s.split(/\s+/).length);
+  const mean = lens.reduce((a,b)=>a+b,0)/lens.length;
+  const std = Math.sqrt(lens.reduce((a,b)=>a+(b-mean)**2,0)/lens.length);
+  const cv = std/mean;
+  return Math.max(0, Math.min(1, 1-cv/0.8));
+}
+
+function buzzwordDensity(text) {
+  const t = text.toLowerCase();
+  const hits = AI_BUZZWORDS.filter(bw=>t.includes(bw)).length;
+  return Math.min(1, hits/6);
+}
+
+function humanMarkers(text) {
+  const t = text.toLowerCase();
+  const hits = HUMAN_MARKERS.filter(hm=>t.includes(hm)).length;
+  return 1-Math.min(1, hits/5);
+}
+
+function sentLengthScore(sentences) {
+  if (!sentences.length) return 0.5;
+  const avg = sentences.reduce((a,s)=>a+s.split(/\s+/).length,0)/sentences.length;
+  if (avg>=14 && avg<=26) return 0.7;
+  if (avg<8 || avg>35) return 0.25;
+  return 0.5;
+}
+
+function punctVariety(text) {
+  const total = (text.match(/[.,!?;:\-()]/g)||[]).length;
+  const varied = (text.match(/[!?;:\-()]/g)||[]).length;
+  if (!total) return 0.5;
+  return 1-Math.min(1,(varied/total)/0.3);
+}
+
+function repetitionScore(text) {
+  const words = text.toLowerCase().split(/\s+/);
+  const tri = {};
+  for (let i=0; i<words.length-2; i++) {
+    const t = words.slice(i,i+3).join(' ');
+    tri[t] = (tri[t]||0)+1;
+  }
+  const reps = Object.values(tri).filter(c=>c>1).length;
+  return Math.min(1, reps/5);
+}
+
+function formalityScore(text) {
+  const informal = (text.toLowerCase().match(/\b(gonna|wanna|gotta|kinda|sorta|yeah|nope|cool|awesome|stuff|things|lots|tons)\b/g)||[]).length;
+  const contractions = (text.toLowerCase().match(/\b\w+'[a-z]{1,2}\b/g)||[]).length;
+  return Math.max(0, 1-(informal+contractions*0.5)/5);
+}
+
+function scoreChunk(chunk) {
+  const sentences = splitSentences(chunk).length ? splitSentences(chunk) : [chunk];
+  const feats = {
+    perplexity:    entropy(chunk),
+    burstiness:    burstiness(sentences),
+    buzzwords:     buzzwordDensity(chunk),
+    human_markers: humanMarkers(chunk),
+    sent_length:   sentLengthScore(sentences),
+    punctuation:   punctVariety(chunk),
+    repetition:    repetitionScore(chunk),
+    formality:     formalityScore(chunk),
+  };
+  const w = { perplexity:.10, burstiness:.15, buzzwords:.20, human_markers:.15, sent_length:.10, punctuation:.10, repetition:.10, formality:.10 };
+  const aiProb = Object.keys(feats).reduce((s,k)=>s+feats[k]*w[k],0);
+  return { prob: Math.min(0.98, Math.max(0.02, aiProb)), feats };
+}
+
+function analyzeLocally(text) {
+  text = cleanText(text);
+  const chunks = splitChunks(text, 100);
+  const chunkResults = chunks.map((chunk, i) => {
+    const { prob, feats } = scoreChunk(chunk);
+    return {
+      chunk_id: i+1,
+      text_preview: chunk.slice(0,120)+(chunk.length>120?'...':''),
+      ai_probability: +prob.toFixed(4),
+      human_probability: +(1-prob).toFixed(4),
+      label: prob >= 0.5 ? 'AI-generated' : 'Human-written',
+      confidence: +(Math.abs(prob-0.5)*2*100).toFixed(1),
+      features: feats
+    };
+  });
+
+  const chunkWeights = chunks.map(c=>c.split(' ').length);
+  const totalW = chunkWeights.reduce((a,b)=>a+b,0);
+  const avgAI = chunkResults.reduce((s,cr,i)=>s+cr.ai_probability*chunkWeights[i],0)/totalW;
+
+  const aiPct = +(avgAI*100).toFixed(1);
+  const humanPct = +((1-avgAI)*100).toFixed(1);
+
+  let verdict, severity;
+  if (aiPct>=80)      { verdict="Highly AI-generated";   severity="critical"; }
+  else if (aiPct>=60) { verdict="Mostly AI-generated";   severity="high"; }
+  else if (aiPct>=45) { verdict="Mixed content detected"; severity="medium"; }
+  else if (aiPct>=25) { verdict="Mostly human-written";  severity="low"; }
+  else                { verdict="Highly human-written";  severity="safe"; }
+
+  const allFeats = chunkResults.map(c=>c.features);
+  const avgFeat = {};
+  Object.keys(allFeats[0]).forEach(k => {
+    avgFeat[k] = +(allFeats.reduce((s,f)=>s+f[k],0)/allFeats.length).toFixed(3);
+  });
+
+  return {
+    ai_percentage: aiPct, human_percentage: humanPct,
+    verdict, severity,
+    overall_confidence: +(Math.abs(avgAI-0.5)*2*100).toFixed(1),
+    total_chunks: chunks.length,
+    word_count: text.split(/\s+/).length,
+    chunk_analysis: chunkResults,
+    avg_features: avgFeat
+  };
+}
+
+// ──────────────────────────────────────────────────────
+//  RENDER
+// ──────────────────────────────────────────────────────
+function featureColor(val) {
+  if (val > 0.66) return '#f87171';
+  if (val > 0.33) return '#fbbf24';
+  return '#34d399';
+}
+
+function renderResults(data) {
+  // Verdict
+  const banner = document.getElementById('verdictBanner');
+  banner.className = `verdict-banner ${data.severity}`;
+  document.getElementById('verdictText').textContent = data.verdict;
+  document.getElementById('verdictMeta').textContent =
+    `Based on ${data.total_chunks} segments · ${data.word_count} words analyzed`;
+  document.getElementById('confPill').textContent =
+    `Confidence: ${data.overall_confidence}%`;
+
+  // Stats
+  document.getElementById('aiPct').textContent = data.ai_percentage + '%';
+  document.getElementById('humanPct').textContent = data.human_percentage + '%';
+
+  // Bar
+  document.getElementById('barLabelAI').textContent = `AI: ${data.ai_percentage}%`;
+  document.getElementById('barLabelHuman').textContent = `Human: ${data.human_percentage}%`;
+  setTimeout(() => {
+    document.getElementById('barAI').style.width = data.ai_percentage + '%';
+  }, 100);
+
+  // Meta chips
+  document.getElementById('metaRow').innerHTML = `
+    <div class="meta-chip">Segments: <strong>${data.total_chunks}</strong></div>
+    <div class="meta-chip">Words: <strong>${data.word_count}</strong></div>
+    <div class="meta-chip">AI score: <strong>${data.ai_percentage}%</strong></div>
+    <div class="meta-chip">Human score: <strong>${data.human_percentage}%</strong></div>
+    <div class="meta-chip">Confidence: <strong>${data.overall_confidence}%</strong></div>
+  `;
+
+  // Features
+  const fg = document.getElementById('featureGrid');
+  fg.innerHTML = Object.entries(data.avg_features).map(([k,v]) => {
+    const meta = FEATURE_META[k] || { label: k, desc: '' };
+    const pct = Math.round(v*100);
+    const color = featureColor(v);
+    return `<div class="feature-item">
+      <div class="feature-name">${meta.label}</div>
+      <div class="feature-bar-bg">
+        <div class="feature-bar-fill" style="width:0%;background:${color}" data-width="${pct}%"></div>
+      </div>
+      <div class="feature-value" style="color:${color}">${pct}%</div>
+    </div>`;
+  }).join('');
+
+  setTimeout(() => {
+    document.querySelectorAll('.feature-bar-fill').forEach(el => {
+      el.style.width = el.dataset.width;
+    });
+  }, 150);
+
+  // Chunks
+  document.getElementById('chunkList').innerHTML = data.chunk_analysis.map(ch => `
+    <div class="chunk-item">
+      <div class="chunk-num">#${ch.chunk_id}</div>
+      <div class="chunk-text">${ch.text_preview}</div>
+      <div>
+        <div class="chunk-badge ${ch.label==='AI-generated'?'ai':'human'}">
+          ${ch.label==='AI-generated'?'AI':'Human'}
+        </div>
+        <div class="chunk-pct">${(ch.ai_probability*100).toFixed(0)}% AI</div>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('results').classList.add('visible');
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ──────────────────────────────────────────────────────
+//  MAIN ANALYZE
+// ──────────────────────────────────────────────────────
+async function analyze() {
+  const text = document.getElementById('resumeInput').value.trim();
+  const errorEl = document.getElementById('errorMsg');
+  errorEl.classList.remove('show');
+
+  if (text.length < 50) {
+    errorEl.textContent = 'Please paste at least 50 characters of resume text.';
+    errorEl.classList.add('show');
+    return;
+  }
+
+  const btn = document.getElementById('analyzeBtn');
+  const loader = document.getElementById('loader');
+  const results = document.getElementById('results');
+
+  btn.disabled = true;
+  btn.textContent = 'Analyzing...';
+  loader.classList.add('active');
+  results.classList.remove('visible');
+
+  // Try backend first, fallback to client-side
+  let data;
+  try {
+    const res = await fetch('/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+      signal: AbortSignal.timeout(5000)
+    });
+    if (res.ok) {
+      data = await res.json();
+    } else {
+      throw new Error('Backend error');
+    }
+  } catch {
+    // Fallback: run analysis entirely in the browser
+    await new Promise(r => setTimeout(r, 600));
+    data = analyzeLocally(text);
+  }
+
+  loader.classList.remove('active');
+  btn.disabled = false;
+  btn.textContent = '▶ ANALYZE RESUME';
+
+  if (data.error) {
+    errorEl.textContent = data.error;
+    errorEl.classList.add('show');
+    return;
+  }
+
+  renderResults(data);
+}
+</script>
+</body>
+
+</html>
+
+
