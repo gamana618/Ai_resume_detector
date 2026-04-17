@@ -1,5 +1,5 @@
 # ResumeIQ — AI Resume Detector
-### Machine Learning Project | AI vs Human Resume Detection
+### AI vs Human Resume Detection
 
 ---
 
@@ -71,3 +71,6 @@ Segments:         12 chunks analyzed
 - Shows segment-by-segment scoring table
 - All 8 features visualized with progress bars
 - Handles any percentage split accurately
+
+## web app link 
+- ornate-kleicha-51e735.netlify.app
